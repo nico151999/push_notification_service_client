@@ -1,0 +1,1 @@
+Application demonstrating how a channel based push notification service might look like

@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">Push Notification Service Tester</string>
+    <string name="channel_name">Notification Service Channel</string>
+    <string name="device_admin_description">This app requires admin privileges to better run continuously</string>
+</resources>
