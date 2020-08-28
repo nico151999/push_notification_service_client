@@ -16,7 +16,6 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.os.PowerManager;
 import android.os.Process;
 import android.util.Base64;
 import android.util.Log;
@@ -32,10 +31,11 @@ import androidx.annotation.Nullable;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 
+// TODO: let other apps connect to this service and send broadcasts to them when a notification
+//  is received, so that each app can handle notifications on its own
 public class NotificationService extends Service {
     private static final String TAG = NotificationService.class.getSimpleName();
     public static final String SUBSCRIPTION_EXTRA_KEY = "SUBSCRIPTION_EXTRA_KEY";
-    public static final String SUBSCRIPTIONS_EXTRA_KEY = "SUBSCRIPTIONS_EXTRA_KEY";
     public static final String IP_EXTRA_KEY = "IP_EXTRA_KEY";
     public static final String PORT_EXTRA_KEY = "PORT_EXTRA_KEY";
     private static final String CHANNEL_ID = "NOTIFICATION_SERVICE_CHANNEL_ID";
@@ -45,7 +45,6 @@ public class NotificationService extends Service {
     private static final String ICON_KEY = "icon";
 
     private boolean mServiceRunning;
-    private Looper mServiceLooper;
     private Handler mServiceHandler;
     private final NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(
             this,
@@ -66,19 +65,25 @@ public class NotificationService extends Service {
         }
 
         private void delayedRetry(Message msg) {
-            try {
-                Thread.sleep(30000);
-            } catch (InterruptedException ex) {
-                Log.e(TAG, "An error occurred. The service is shutting down now...");
-                stopSelf(msg.arg1);
-                return;
+            if (mPushNotificationClient != null) {
+                try {
+                    mPushNotificationClient.stopConnection();
+                } catch (IOException ignore) {}
             }
-            if (isNetworkConnectionPresent()) {
-                Log.i(TAG, "Trying to connect to notification server again...");
-                handleMessage(msg);
-            } else {
-                delayedRetry(msg);
+            if (mServiceRunning) {
+                try {
+                    Thread.sleep(30000);
+                    if (isNetworkConnectionPresent() && mServiceRunning) {
+                        Log.i(TAG, "Trying to connect to notification server again...");
+                        handleMessage(msg);
+                        return;
+                    }
+                } catch (InterruptedException ex) {
+                    Log.e(TAG, "An error occurred. The service is shutting down now...");
+                }
             }
+            onDestroy();
+            stopSelf(msg.arg1);
         }
 
         private boolean isNetworkConnectionPresent() {
@@ -178,6 +183,7 @@ public class NotificationService extends Service {
                 delayedRetry(msg);
                 return;
             }
+            onDestroy();
             stopSelf(msg.arg1);
         }
     }
@@ -185,18 +191,6 @@ public class NotificationService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        String packageName = getPackageName();
-        PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
-        if (!pm.isIgnoringBatteryOptimizations(packageName)) {
-            startActivity(
-                    new Intent()
-                            .setAction(
-                                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-                            )
-                            .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                            .setData(Uri.parse("package:" + packageName))
-            );
-        }
         getSystemService(NotificationManager.class).createNotificationChannel(
                 new NotificationChannel(
                         CHANNEL_ID,
@@ -211,17 +205,20 @@ public class NotificationService extends Service {
                 Process.THREAD_PRIORITY_LOWEST
         );
         thread.start();
-        mServiceLooper = thread.getLooper();
-        mServiceHandler = new ServiceHandler(mServiceLooper);
+        mServiceHandler = new ServiceHandler(thread.getLooper());
     }
 
     @Override
     public synchronized int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         if (intent != null) {
             if (mPushNotificationClient != null && intent.hasExtra(SUBSCRIPTION_EXTRA_KEY)) {
-                mPushNotificationClient.sendMessage(
-                        intent.getStringExtra(SUBSCRIPTIONS_EXTRA_KEY)
-                );
+                final String subscription = intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY);
+                new Thread() {
+                    @Override
+                    public void run() {
+                        mPushNotificationClient.sendMessage(subscription);
+                    }
+                }.start();
             } else if (!mServiceRunning) {
                 mServiceRunning = true;
                 Message msg = mServiceHandler.obtainMessage();
@@ -236,14 +233,14 @@ public class NotificationService extends Service {
 
     @Override
     public void onDestroy() {
-        Log.i(TAG, "Notification service destroyed");
         mServiceRunning = false;
         if (mPushNotificationClient != null) {
             try {
                 mPushNotificationClient.stopConnection();
             } catch (IOException ignore) {}
         }
-        mServiceLooper.quit();
+        mServiceHandler.getLooper().quit();
+        Log.i(TAG, "Notification service destroyed");
     }
 
     @Nullable

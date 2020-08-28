@@ -2,4 +2,21 @@
     <string name="app_name">Push Notification Service Tester</string>
     <string name="channel_name">Notification Service Channel</string>
     <string name="device_admin_description">This app requires admin privileges to better run continuously</string>
+    <string name="disable_battery_optimization_warning">Battery optimization is enabled. Please go to the notification service app and disable it to let the service run stably.</string>
+    <string name="no_background_app">The app must have background optimization disabled to be able to run</string>
+    <string name="ip">IP: %1$s</string>
+    <string name="port">Port: %1$d</string>
+    <string name="ip_hint">Type your server\'s ip or hostname here</string>
+    <string name="port_hint">Type your server\'s port here</string>
+    <string name="save_spec">Save those server specs</string>
+    <string name="port_not_numeric">A port must be numeric</string>
+    <string name="improper_ip_or_port">Your ip or port has an improper format</string>
+    <string name="admin_explanation">Admin rights allow this app to enable the push notification service</string>
+    <string name="admin_not_enabled">App was not enabled as admin. Please head over to the device settings and enable it manually.</string>
+    <string name="set_server_specs">Disable the app as device admin and set the server specs in the app\'s settings first!</string>
+    <string name="open_admin_settings">Open the admin settings page</string>
+    <string name="subscribe_permission_label">Subscribe to notification channels</string>
+    <string name="subscribe_permission_description">This permission allows the app to subscribe to notification channels</string>
+    <string name="EXTRA_SUBSCRIPTION" translatable="false">subscription</string>
+    <string name="ACTION_SUBSCRIBE_NOTIFICATION_CHANNEL" translatable="false">de.nico.pushnotification.servicetester.action.SUBSCRIBE_NOTIFICATION_CHANNEL</string>
 </resources>

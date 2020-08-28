@@ -8,14 +8,16 @@ import android.util.Log;
 public class ChannelSubscriptionReceiver extends BroadcastReceiver {
 
     private static final String TAG = ChannelSubscriptionReceiver.class.getSimpleName();
-    public static final String EXTRA_SUBSCRIPTION = "EXTRA_SUBSCRIPTION";
-    public static final String ACTION_SUBSCRIBE_NOTIFICATION_CHANNEL =
-            "de.nico.pushnotification.servicetester.intent.action.SUBSCRIBE_NOTIFICATION_CHANNEL";
 
     @Override
     public void onReceive(Context context, Intent intent) {
-        String subscription = intent.getStringExtra(EXTRA_SUBSCRIPTION);
-        if (subscription != null && ACTION_SUBSCRIBE_NOTIFICATION_CHANNEL.equals(intent.getAction())) {
+        String subscription = intent.getStringExtra(
+                context.getString(R.string.EXTRA_SUBSCRIPTION)
+        );
+        if (subscription != null &&
+                context.getString(R.string.ACTION_SUBSCRIBE_NOTIFICATION_CHANNEL)
+                        .equals(intent.getAction())) {
+            Log.i(TAG, "Trying to subscribe to " + subscription);
             try {
                 context.startService(
                         new Intent(context, NotificationService.class)
@@ -25,8 +27,7 @@ public class ChannelSubscriptionReceiver extends BroadcastReceiver {
                                 )
                 );
             } catch (IllegalStateException e) {
-                Log.e(TAG, "The app must be installed as system app to be able to start the notification service");
-                e.printStackTrace();
+                AdminStateReceiver.noBackgroundAppException(context, e);
             }
         }
     }

@@ -3,6 +3,12 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     package="de.nico.pushnotification.servicetester">
 
+    <permission
+        android:name="de.nico.pushnotification.servicetester.permission.NOTIFICATION_CHANNEL_SUBSCRIBER"
+        android:label="@string/subscribe_permission_label"
+        android:description="@string/subscribe_permission_description"
+        android:protectionLevel="normal" />
+
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
@@ -14,6 +20,14 @@
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round">
+        <activity
+            android:theme="@style/Theme.AppCompat"
+            android:name=".NotificationSettingActivity">
+            <intent-filter>
+                <category android:name="android.intent.category.LAUNCHER"/>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
         <receiver
             android:name=".AdminStateReceiver"
             android:label="@string/app_name"
@@ -29,14 +43,17 @@
             </intent-filter>
         </receiver>
         <receiver
+            android:enabled="true"
+            android:exported="true"
             android:name=".ChannelSubscriptionReceiver"
             android:permission="de.nico.pushnotification.servicetester.permission.NOTIFICATION_CHANNEL_SUBSCRIBER">
             <intent-filter>
-                <action android:name="de.nico.pushnotification.servicetester.intent.action.SUBSCRIBE_NOTIFICATION_CHANNEL" />
+                <action android:name="de.nico.pushnotification.servicetester.action.SUBSCRIBE_NOTIFICATION_CHANNEL" />
             </intent-filter>
         </receiver>
         <receiver android:name=".StartNotificationServiceReceiver"/>
-        <!-- TODO: Find out how to make android launch and bind to this service (DeviceAdminService) -->
+        <!-- TODO: Find out how to make android launch and bind to this service (DeviceAdminService)
+        For now we will use a normal service running in the background
         <service
             android:name=".NetworkStateService"
             android:exported="false"
@@ -46,7 +63,11 @@
                 <action android:name="android.app.action.DEVICE_ADMIN_SERVICE" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
-        </service>
+        </service>-->
+        <service
+            android:name=".NetworkStateService"
+            android:exported="false"
+            android:enabled="true"/>
         <service
             android:name=".NotificationService"
             android:exported="false"
