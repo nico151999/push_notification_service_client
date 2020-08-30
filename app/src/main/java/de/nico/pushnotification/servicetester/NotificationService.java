@@ -212,13 +212,7 @@ public class NotificationService extends Service {
     public synchronized int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         if (intent != null) {
             if (mPushNotificationClient != null && intent.hasExtra(SUBSCRIPTION_EXTRA_KEY)) {
-                final String subscription = intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY);
-                new Thread() {
-                    @Override
-                    public void run() {
-                        mPushNotificationClient.sendMessage(subscription);
-                    }
-                }.start();
+                mPushNotificationClient.sendMessage(intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY));
             } else if (!mServiceRunning) {
                 mServiceRunning = true;
                 Message msg = mServiceHandler.obtainMessage();
