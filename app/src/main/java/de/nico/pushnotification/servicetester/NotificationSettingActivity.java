@@ -53,7 +53,7 @@ public class NotificationSettingActivity extends AppCompatActivity {
                             .setData(Uri.parse("package:" + getPackageName()))
             );
         }
-        if (AdminStateReceiver.hasServerSpecs(this, false)) {
+        if (AdminStateReceiver.hasServerSpecs(this)) {
             showInfoWidgets();
         } else {
             showEditWidgets();

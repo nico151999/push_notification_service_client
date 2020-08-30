@@ -26,7 +26,7 @@ public class AdminStateReceiver extends DeviceAdminReceiver {
 
     @Override
     public void onEnabled(@NonNull Context context, @NonNull Intent intent) {
-        if (!hasServerSpecs(context, false)) {
+        if (!hasServerSpecs(context)) {
             Toast.makeText(
                     context,
                     R.string.set_server_specs,
@@ -42,7 +42,7 @@ public class AdminStateReceiver extends DeviceAdminReceiver {
     public void onDisabled(@NonNull Context context, @NonNull Intent intent) {
         stopNetworkStateService(context);
         stopNotificationServiceBroadcast(context);
-        hasServerSpecs(context, true);
+        hasServerSpecs(context);
     }
 
     public static boolean isAdmin(Context context) {
@@ -52,23 +52,13 @@ public class AdminStateReceiver extends DeviceAdminReceiver {
         return (dpm != null && dpm.isAdminActive(mAdminName));
     }
 
-    public static boolean hasServerSpecs(Context context, boolean delete) {
+    public static boolean hasServerSpecs(Context context) {
         SharedPreferences preferences = context.getSharedPreferences(
                 StartNotificationServiceReceiver.SERVER_PREFERENCES,
                 Context.MODE_PRIVATE
         );
-        if (preferences.contains(StartNotificationServiceReceiver.IP_KEY) &&
-                preferences.contains(StartNotificationServiceReceiver.PORT_KEY)) {
-            if (delete) {
-                preferences.edit()
-                        .remove(StartNotificationServiceReceiver.IP_KEY)
-                        .remove(StartNotificationServiceReceiver.PORT_KEY)
-                        .apply();
-            }
-            return true;
-        } else {
-            return false;
-        }
+        return (preferences.contains(StartNotificationServiceReceiver.IP_KEY) &&
+                preferences.contains(StartNotificationServiceReceiver.PORT_KEY));
     }
 
     public static void startNotificationServiceBroadcast(Context context) {
