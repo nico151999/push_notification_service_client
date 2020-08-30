@@ -82,7 +82,6 @@ public class NotificationService extends Service {
                     Log.e(TAG, "An error occurred. The service is shutting down now...");
                 }
             }
-            onDestroy();
             stopSelf(msg.arg1);
         }
 
@@ -104,7 +103,7 @@ public class NotificationService extends Service {
         }
 
         @Override
-        public void handleMessage(Message msg) {
+        public void handleMessage(final Message msg) {
             Intent intent = (Intent)msg.obj;
 
             Log.i(TAG, "Started notification handler");
@@ -129,9 +128,7 @@ public class NotificationService extends Service {
                     add((notification) -> {
                         if (notification == null) {
                             Log.i(TAG, "The connection to the server was closed");
-                            try {
-                                mPushNotificationClient.stopConnection();
-                            } catch (IOException ignored) {}
+                            delayedRetry(msg);
                             return;
                         }
                         synchronized (mBuilder) {
@@ -183,7 +180,6 @@ public class NotificationService extends Service {
                 delayedRetry(msg);
                 return;
             }
-            onDestroy();
             stopSelf(msg.arg1);
         }
     }
