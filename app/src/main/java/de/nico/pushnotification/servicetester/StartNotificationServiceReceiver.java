@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 
 public class StartNotificationServiceReceiver extends BroadcastReceiver {
-    private static final String TAG = "TAG";
     public static final String START = "START";
     public static final String SERVER_PREFERENCES = "server_config";
     public static final String IP_KEY = "ip";

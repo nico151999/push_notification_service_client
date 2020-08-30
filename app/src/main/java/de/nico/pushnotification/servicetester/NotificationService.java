@@ -35,6 +35,7 @@ import androidx.core.app.NotificationManagerCompat;
 //  is received, so that each app can handle notifications on its own
 public class NotificationService extends Service {
     private static final String TAG = NotificationService.class.getSimpleName();
+    private static final String CONNECTION_EXTRA_KEY = "CONNECTION_EXTRA_KEY";
     public static final String SUBSCRIPTION_EXTRA_KEY = "SUBSCRIPTION_EXTRA_KEY";
     public static final String IP_EXTRA_KEY = "IP_EXTRA_KEY";
     public static final String PORT_EXTRA_KEY = "PORT_EXTRA_KEY";
@@ -207,8 +208,13 @@ public class NotificationService extends Service {
     @Override
     public synchronized int onStartCommand(@Nullable Intent intent, int flags, int startId) {
         if (intent != null) {
-            if (mPushNotificationClient != null && intent.hasExtra(SUBSCRIPTION_EXTRA_KEY)) {
-                mPushNotificationClient.sendMessage(intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY));
+            if (mPushNotificationClient != null) {
+                if (intent.hasExtra(SUBSCRIPTION_EXTRA_KEY)) {
+                    mPushNotificationClient.sendMessage(intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY));
+                    // todo: make a subscription related to a subscribing app and save this subscription in a local database
+                } else if (intent.hasExtra(CONNECTION_EXTRA_KEY)) {
+                    // todo: save subscribing apps in a local database
+                }
             } else if (!mServiceRunning) {
                 mServiceRunning = true;
                 Message msg = mServiceHandler.obtainMessage();

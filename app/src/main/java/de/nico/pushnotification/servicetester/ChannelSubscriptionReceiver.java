@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.util.Log;
 
+// todo: additionally receive apps connecting to the service
 public class ChannelSubscriptionReceiver extends BroadcastReceiver {
 
     private static final String TAG = ChannelSubscriptionReceiver.class.getSimpleName();
