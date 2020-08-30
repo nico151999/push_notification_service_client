@@ -210,7 +210,13 @@ public class NotificationService extends Service {
         if (intent != null) {
             if (mPushNotificationClient != null) {
                 if (intent.hasExtra(SUBSCRIPTION_EXTRA_KEY)) {
-                    mPushNotificationClient.sendMessage(intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY));
+                    final String subscription = intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY);
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            mPushNotificationClient.sendMessage(subscription);
+                        }
+                    }.start();
                     // todo: make a subscription related to a subscribing app and save this subscription in a local database
                 } else if (intent.hasExtra(CONNECTION_EXTRA_KEY)) {
                     // todo: save subscribing apps in a local database
