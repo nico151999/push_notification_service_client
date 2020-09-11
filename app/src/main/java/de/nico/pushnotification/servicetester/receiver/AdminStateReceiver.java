@@ -1,4 +1,4 @@
-package de.nico.pushnotification.servicetester;
+package de.nico.pushnotification.servicetester.receiver;
 
 import android.app.admin.DeviceAdminReceiver;
 import android.app.admin.DevicePolicyManager;
@@ -10,6 +10,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+
+import de.nico.pushnotification.servicetester.BroadcastRegisterService;
+import de.nico.pushnotification.servicetester.R;
 
 public class AdminStateReceiver extends DeviceAdminReceiver {
     private static final String TAG = AdminStateReceiver.class.getSimpleName();
@@ -91,7 +94,7 @@ public class AdminStateReceiver extends DeviceAdminReceiver {
             context.startService(
                     new Intent(
                             context,
-                            NetworkStateService.class
+                            BroadcastRegisterService.class
                     )
             );
         } catch (IllegalStateException e) {
@@ -107,7 +110,7 @@ public class AdminStateReceiver extends DeviceAdminReceiver {
             context.stopService(
                     new Intent(
                             context,
-                            NetworkStateService.class
+                            BroadcastRegisterService.class
                     )
             );
         } catch (IllegalStateException e) {

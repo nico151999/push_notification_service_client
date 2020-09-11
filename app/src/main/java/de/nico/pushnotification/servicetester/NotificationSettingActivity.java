@@ -18,6 +18,9 @@ import android.widget.Toast;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 
+import de.nico.pushnotification.servicetester.receiver.AdminStateReceiver;
+import de.nico.pushnotification.servicetester.receiver.StartNotificationServiceReceiver;
+
 import static android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS;
 
 // Android apps are in a state that does not receive ON_BOOT_COMPLETE right after installation.

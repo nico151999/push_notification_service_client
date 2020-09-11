@@ -1,9 +1,11 @@
-package de.nico.pushnotification.servicetester;
+package de.nico.pushnotification.servicetester.receiver;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+
+import de.nico.pushnotification.servicetester.NotificationService;
 
 public class StartNotificationServiceReceiver extends BroadcastReceiver {
     public static final String START = "START";

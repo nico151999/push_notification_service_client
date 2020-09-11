@@ -1,62 +1,66 @@
 package de.nico.pushnotification.servicetester;
 
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.BitmapFactory;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
-import android.util.Base64;
 import android.util.Log;
 
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 import java.util.function.Consumer;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 
-// TODO: let other apps connect to this service and send broadcasts to them when a notification
-//  is received, so that each app can handle notifications on its own
+import com.couchbase.lite.CouchbaseLite;
+import com.couchbase.lite.CouchbaseLiteException;
+import com.couchbase.lite.DataSource;
+import com.couchbase.lite.Database;
+import com.couchbase.lite.DatabaseConfiguration;
+import com.couchbase.lite.Expression;
+import com.couchbase.lite.Meta;
+import com.couchbase.lite.MutableArray;
+import com.couchbase.lite.MutableDocument;
+import com.couchbase.lite.Query;
+import com.couchbase.lite.QueryBuilder;
+import com.couchbase.lite.Result;
+import com.couchbase.lite.ResultSet;
+import com.couchbase.lite.SelectResult;
+
+import de.nico.pushnotification.servicetester.message.ApplicationSubscriptionMessage;
+import de.nico.pushnotification.servicetester.message.ChannelSubscriptionMessage;
+import de.nico.pushnotification.servicetester.message.ClientsMessage;
+import de.nico.pushnotification.servicetester.message.PushNotificationMessage;
+
 public class NotificationService extends Service {
     private static final String TAG = NotificationService.class.getSimpleName();
-    private static final String CONNECTION_EXTRA_KEY = "CONNECTION_EXTRA_KEY";
     public static final String SUBSCRIPTION_EXTRA_KEY = "SUBSCRIPTION_EXTRA_KEY";
+    public static final String UNSUBSCRIPTION_EXTRA_KEY = "UNSUBSCRIPTION_EXTRA_KEY";
+    public static final String SUBSCRIPTION_CHANNEL_EXTRA_KEY = "SUBSCRIPTION_CHANNEL_EXTRA_KEY";
     public static final String IP_EXTRA_KEY = "IP_EXTRA_KEY";
     public static final String PORT_EXTRA_KEY = "PORT_EXTRA_KEY";
-    private static final String CHANNEL_ID = "NOTIFICATION_SERVICE_CHANNEL_ID";
-    private static final String TITLE_KEY = "title";
-    private static final String CONTENT_KEY = "message";
-    private static final String URI_KEY = "uri";
-    private static final String ICON_KEY = "icon";
+    private static final String DB_PACKAGE_KEY = "package";
+    private static final String DB_SUBSCRIPTIONS_KEY = "subscriptions";
+    private static final String NOTIFICATION_LIBRARY_RECEIVER = "de.nico.pushnotification.library.receiver";
+    private static final String ACTION_SHOW_NOTIFICATION = "de.nico.pushnotification.library.action.SHOW_NOTIFICATION";
+    private static final String PERMISSION_SHOW_NOTIFICATION = "de.nico.pushnotification.library.action.SHOW_NOTIFICATION";
 
     private boolean mServiceRunning;
     private Handler mServiceHandler;
-    private final NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(
-            this,
-            CHANNEL_ID
-    ).setSmallIcon(
-            R.drawable.ic_launcher_foreground
-    ).setPriority(
-            NotificationCompat.PRIORITY_DEFAULT
-    );
-    private int mId = -2147483648;
-    private NotificationManagerCompat mNotificationManager;
     private PushNotificationClient mPushNotificationClient;
 
 
@@ -124,55 +128,72 @@ public class NotificationService extends Service {
                 delayedRetry(msg);
                 return;
             }
+
+            Database database;
             try {
-                mPushNotificationClient.addOnReceiveMessageListeners(new ArrayList<Consumer<String>>() {{
+                database = initSubscriberDatabase();
+            } catch (CouchbaseLiteException e) {
+                Log.e(TAG, "Failed to create database object", e);
+                stopSelf(msg.arg1);
+                return;
+            }
+            Query query = QueryBuilder.select(SelectResult.all())
+                    .from(DataSource.database(database));
+            ResultSet result;
+            try {
+                result = query.execute();
+            } catch (CouchbaseLiteException e) {
+                Log.e(TAG, "Failed to query database", e);
+                stopSelf(msg.arg1);
+                return;
+            }
+            ClientsMessage message = new ClientsMessage();
+            for (Result res : result) {
+                message.put(
+                        res.getString(DB_PACKAGE_KEY),
+                        (List<String>) (List<?>) res.getArray(DB_SUBSCRIPTIONS_KEY).toList()
+                );
+            }
+            // TODO: see TODO @handleSubscriptionIntent method
+            mPushNotificationClient.sendMessage(message);
+            try {
+                mPushNotificationClient.addOnReceiveMessageListeners(new ArrayList<Consumer<String>>() {
+                    private static final String TITLE_KEY = "title";
+                    private static final String CONTENT_KEY = "content";
+                    private static final String ICON_KEY = "icon";
+                    private static final String URI_KEY = "uri";
+
+                    {
                     add((notification) -> {
                         if (notification == null) {
                             Log.i(TAG, "The connection to the server was closed");
                             delayedRetry(msg);
                             return;
                         }
-                        synchronized (mBuilder) {
-                            try {
-                                JSONObject messageJSON = new JSONObject(notification);
-                                mBuilder
-                                        .setLargeIcon(null)
-                                        .setContentIntent(null)
-                                        .setContentTitle(messageJSON.getString(TITLE_KEY))
-                                        .setContentText(messageJSON.getString(CONTENT_KEY));
-                                if (messageJSON.has(ICON_KEY)) {
-                                    try {
-                                        byte[] b = Base64.decode(messageJSON.getString(ICON_KEY), Base64.DEFAULT);
-                                        mBuilder.setLargeIcon(
-                                                BitmapFactory.decodeByteArray(b, 0, b.length)
-                                        );
-                                    } catch (IllegalArgumentException e) {
-                                        Log.e(TAG, "The submitted base64 image has an improper format");
-                                    }
-                                }
-                                if (messageJSON.has(URI_KEY)) {
-                                    mBuilder
-                                            .setAutoCancel(true)
-                                            .setContentIntent(
-                                                    PendingIntent.getActivity(
-                                                            getApplicationContext(),
-                                                            (int) System.currentTimeMillis(),
-                                                            new Intent(
-                                                                    Intent.ACTION_VIEW,
-                                                                    Uri.parse(messageJSON.getString(URI_KEY))
-                                                            ),
-                                                            PendingIntent.FLAG_UPDATE_CURRENT
-                                                    )
-                                            );
-                                }
-                            } catch (JSONException e) {
-                                Log.e(TAG, "Failed to parse notification specifications");
-                                return;
+                        try {
+                            PushNotificationMessage message = PushNotificationMessage.parse(notification);
+                            Intent intent = new Intent()
+                                    .putExtra(TITLE_KEY, message.getTitle())
+                                    .putExtra(CONTENT_KEY, message.getContent());
+                            byte[] b = message.getIcon();
+                            if (b != null) {
+                                intent.putExtra(ICON_KEY, b);
                             }
-                            mNotificationManager.notify(
-                                    mId++,
-                                    mBuilder.build()
+                            String uri = message.getUri();
+                            if (uri != null) {
+                                intent.putExtra(URI_KEY, uri);
+                            }
+                            sendBroadcast(
+                                    intent
+                                            .setAction(ACTION_SHOW_NOTIFICATION)
+                                            .setComponent(new ComponentName(
+                                                    message.getReceiverPackage(),
+                                                    NOTIFICATION_LIBRARY_RECEIVER
+                                            )),
+                                    PERMISSION_SHOW_NOTIFICATION
                             );
+                        } catch (JSONException e) {
+                            Log.e(TAG, "Failed to parse notification specifications", e);
                         }
                     });
                 }}, true);
@@ -188,15 +209,6 @@ public class NotificationService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        getSystemService(NotificationManager.class).createNotificationChannel(
-                new NotificationChannel(
-                        CHANNEL_ID,
-                        getString(R.string.channel_name),
-                        NotificationManager.IMPORTANCE_DEFAULT
-                )
-        );
-        mNotificationManager = NotificationManagerCompat.from(this);
-
         HandlerThread thread = new HandlerThread(
                 "Notification Service Handler",
                 Process.THREAD_PRIORITY_LOWEST
@@ -210,16 +222,19 @@ public class NotificationService extends Service {
         if (intent != null) {
             if (mPushNotificationClient != null) {
                 if (intent.hasExtra(SUBSCRIPTION_EXTRA_KEY)) {
-                    final String subscription = intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY);
                     new Thread() {
                         @Override
                         public void run() {
-                            mPushNotificationClient.sendMessage(subscription);
+                            handleSubscriptionIntent(intent);
                         }
                     }.start();
-                    // todo: make a subscription related to a subscribing app and save this subscription in a local database
-                } else if (intent.hasExtra(CONNECTION_EXTRA_KEY)) {
-                    // todo: save subscribing apps in a local database
+                } else if (intent.hasExtra(UNSUBSCRIPTION_EXTRA_KEY)) {
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            handleUnsubscriptionIntent(intent);
+                        }
+                    }.start();
                 }
             } else if (!mServiceRunning) {
                 mServiceRunning = true;
@@ -231,6 +246,98 @@ public class NotificationService extends Service {
             }
         }
         return START_NOT_STICKY;
+    }
+
+    // TODO: consider not saving registered locations locally but in a database maintained by the server
+    //  this requires a unique identifier the device sends every time it connects to the server
+    private synchronized void handleSubscriptionIntent(@NonNull Intent intent) {
+        Database database;
+        try {
+            database = initSubscriberDatabase();
+        } catch (CouchbaseLiteException e) {
+            Log.e(TAG, "Failed to create database object", e);
+            return;
+        }
+        String subscriber = intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY);
+        Query query = QueryBuilder.select(SelectResult.expression(Meta.id))
+                .from(DataSource.database(database))
+                .where(Expression.property(DB_PACKAGE_KEY).equalTo(Expression.string(subscriber)));
+        ResultSet result;
+        try {
+            result = query.execute();
+        } catch (CouchbaseLiteException e) {
+            Log.e(TAG, "Cannot query database", e);
+            return;
+        }
+        Result res = result.next();
+        if (intent.hasExtra(SUBSCRIPTION_CHANNEL_EXTRA_KEY)) {
+            if (res == null) {
+                Log.e(TAG, "A package must be registered before it can subscribe to channels");
+                return;
+            }
+            String subscription = intent.getStringExtra(SUBSCRIPTION_CHANNEL_EXTRA_KEY);
+            MutableDocument document = database.getDocument(res.getString("id")).toMutable();
+            MutableArray subscriptions = document.getArray(DB_SUBSCRIPTIONS_KEY);
+            if (!subscriptions.toList().contains(subscription)) {
+                subscriptions.addString(subscription);
+            }
+            try {
+                database.save(document);
+            } catch (CouchbaseLiteException e) {
+                Log.e(TAG, "Could not add subscription to database", e);
+                return;
+            }
+            mPushNotificationClient.sendMessage(new ChannelSubscriptionMessage(subscriber, subscription));
+        } else {
+            if (res != null) {
+                Log.i(TAG, "Application is already registered");
+                return;
+            }
+            MutableDocument mutableDoc = new MutableDocument()
+                    .setString(DB_PACKAGE_KEY, subscriber)
+                    .setArray(DB_SUBSCRIPTIONS_KEY, new MutableArray());
+            try {
+                database.save(mutableDoc);
+            } catch (CouchbaseLiteException e) {
+                Log.e(TAG, "Failed adding package to registered packages", e);
+            }
+            mPushNotificationClient.sendMessage(new ApplicationSubscriptionMessage(subscriber));
+        }
+    }
+
+    private synchronized void handleUnsubscriptionIntent(@NonNull Intent intent) {
+        Database database;
+        try {
+            database = initSubscriberDatabase();
+        } catch (CouchbaseLiteException e) {
+            Log.e(TAG, "Failed to create database object", e);
+            return;
+        }
+        String unsubscriber = intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY);
+        Query query = QueryBuilder.select(SelectResult.expression(Meta.id))
+                .from(DataSource.database(database))
+                .where(Expression.property(DB_PACKAGE_KEY).equalTo(Expression.string(unsubscriber)));
+        ResultSet result;
+        try {
+            result = query.execute();
+        } catch (CouchbaseLiteException e) {
+            Log.e(TAG, "Failed to query unsubscriber's id", e);
+            return;
+        }
+        try {
+            for (Result res : result) {
+                database.delete(database.getDocument(res.getString("id")));
+            }
+        } catch (CouchbaseLiteException e) {
+            Log.e(TAG, "Failed to delete unsubscriber from subscribers", e);
+        }
+    }
+
+    private Database initSubscriberDatabase() throws CouchbaseLiteException {
+        CouchbaseLite.init(getApplicationContext());
+        DatabaseConfiguration config = new DatabaseConfiguration();
+        config.setDirectory(getFilesDir().getPath());
+        return new Database("subscribers", config);
     }
 
     @Override

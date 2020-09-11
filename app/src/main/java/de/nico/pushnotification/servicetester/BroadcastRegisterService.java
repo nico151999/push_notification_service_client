@@ -4,6 +4,7 @@ import android.app.Service;
 //import android.app.admin.DeviceAdminService;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -14,11 +15,15 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-public class NetworkStateService extends /*DeviceAdmin*/Service {
+import de.nico.pushnotification.servicetester.receiver.NotificationAppInstalledStatusReceiver;
+import de.nico.pushnotification.servicetester.receiver.StartNotificationServiceReceiver;
 
-    private static final String TAG = NetworkStateService.class.getSimpleName();
+public class BroadcastRegisterService extends /*DeviceAdmin*/Service {
+
+    private static final String TAG = BroadcastRegisterService.class.getSimpleName();
     private ConnectivityManager mConnectivityManager;
     private NetworkStateCallback mNetworkStateCallback;
+    private NotificationAppInstalledStatusReceiver mNotificationAppInstalledStatusReceiver;
 
     private final class NetworkStateCallback extends ConnectivityManager.NetworkCallback {
         @Override
@@ -27,7 +32,7 @@ public class NetworkStateService extends /*DeviceAdmin*/Service {
             Log.i(TAG, "Network connection was established");
             sendBroadcast(
                     new Intent(
-                            NetworkStateService.this,
+                            BroadcastRegisterService.this,
                             StartNotificationServiceReceiver.class
                     ).putExtra(
                             StartNotificationServiceReceiver.START,
@@ -40,7 +45,12 @@ public class NetworkStateService extends /*DeviceAdmin*/Service {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.i(TAG, "Starting the network state service");
+        Log.i(TAG, "Starting the broadcast register service");
+        registerNetworkCallback();
+        registerApplicationInstallationStateReceiver();
+    }
+
+    private void registerNetworkCallback() {
         mConnectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         mNetworkStateCallback = new NetworkStateCallback();
         mConnectivityManager.registerNetworkCallback(
@@ -52,13 +62,32 @@ public class NetworkStateService extends /*DeviceAdmin*/Service {
         );
     }
 
+    private void registerApplicationInstallationStateReceiver() {
+        mNotificationAppInstalledStatusReceiver = new NotificationAppInstalledStatusReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(Intent.ACTION_PACKAGE_ADDED);
+        intentFilter.addAction(Intent.ACTION_PACKAGE_REMOVED);
+        intentFilter.addDataScheme("package");
+        registerReceiver(mNotificationAppInstalledStatusReceiver, intentFilter);
+    }
+
     @Override
     public void onDestroy() {
         super.onDestroy();
-        Log.i(TAG, "Starting the network state service");
+        Log.i(TAG, "Stopping the broadcast register receiver service");
+        unregisterNetworkCallback();
+        unregisterApplicationInstallationStateReceiver();
+    }
+
+    private void unregisterNetworkCallback() {
         mConnectivityManager.unregisterNetworkCallback(mNetworkStateCallback);
         mNetworkStateCallback = null;
         mConnectivityManager = null;
+    }
+
+    private void unregisterApplicationInstallationStateReceiver() {
+        unregisterReceiver(mNotificationAppInstalledStatusReceiver);
+        mNotificationAppInstalledStatusReceiver = null;
     }
 
     @Nullable

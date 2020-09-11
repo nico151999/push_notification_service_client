@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 
+import de.nico.pushnotification.servicetester.message.Message;
+
 public class PushNotificationClient {
     private final Socket mClientSocket;
     private final PrintWriter mOut;
@@ -68,7 +70,12 @@ public class PushNotificationClient {
             while (mmAliveSynchronously || (!mmClientSocket.isClosed() && !isInterrupted())) {
                 try {
                     String message = mmIn.readLine();
-                    mmOnReceiveMessageListeners.forEach(listener -> listener.accept(message));
+                    new Thread() {
+                        @Override
+                        public void run() {
+                            mmOnReceiveMessageListeners.forEach(listener -> listener.accept(message));
+                        }
+                    }.start();
                 } catch (IOException e) {
                     if (mmAliveSynchronously)  {
                         mmAliveSynchronously = false;
@@ -100,6 +107,10 @@ public class PushNotificationClient {
         synchronized (mOut) {
             mOut.println(msg);
         }
+    }
+
+    public void sendMessage(Message msg) {
+        sendMessage(msg.create());
     }
 
     public synchronized void addOnReceiveMessageListeners(List<Consumer<String>> listeners, boolean synchronous) throws IOException {

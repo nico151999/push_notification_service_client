@@ -5,6 +5,12 @@
 
     <permission
         android:name="de.nico.pushnotification.servicetester.permission.NOTIFICATION_CHANNEL_SUBSCRIBER"
+        android:label="@string/subscribe_channel_permission_label"
+        android:description="@string/subscribe_channel_permission_description"
+        android:protectionLevel="normal" />
+
+    <permission
+        android:name="de.nico.pushnotification.servicetester.permission.RECEIVE_NOTIFICATION"
         android:label="@string/subscribe_permission_label"
         android:description="@string/subscribe_permission_description"
         android:protectionLevel="normal" />
@@ -29,7 +35,7 @@
             </intent-filter>
         </activity>
         <receiver
-            android:name=".AdminStateReceiver"
+            android:name=".receiver.AdminStateReceiver"
             android:label="@string/app_name"
             android:description="@string/device_admin_description"
             android:permission="android.permission.BIND_DEVICE_ADMIN">
@@ -45,15 +51,15 @@
         <receiver
             android:enabled="true"
             android:exported="true"
-            android:name=".ChannelSubscriptionReceiver"
+            android:name=".receiver.ChannelSubscriptionReceiver"
             android:permission="de.nico.pushnotification.servicetester.permission.NOTIFICATION_CHANNEL_SUBSCRIBER">
             <intent-filter>
                 <action android:name="de.nico.pushnotification.servicetester.action.SUBSCRIBE_NOTIFICATION_CHANNEL" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".StartNotificationServiceReceiver"/>
+        <receiver android:name=".receiver.StartNotificationServiceReceiver"/>
         <!-- TODO: Find out how to make android launch and bind to this service (DeviceAdminService)
-        For now we will use a normal service running in the background
+              For now we will use a normal service running in the background...
         <service
             android:name=".NetworkStateService"
             android:exported="false"
@@ -65,7 +71,7 @@
             </intent-filter>
         </service>-->
         <service
-            android:name=".NetworkStateService"
+            android:name=".BroadcastRegisterService"
             android:exported="false"
             android:enabled="true"/>
         <service
