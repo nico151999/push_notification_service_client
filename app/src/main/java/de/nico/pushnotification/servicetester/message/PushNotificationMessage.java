@@ -8,6 +8,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class PushNotificationMessage implements Message {
+    private static final String MESSAGE = "push_notification";
     private static final String TITLE_KEY = "title";
     private static final String CONTENT_KEY = "content";
     private static final String ICON_KEY = "icon";
@@ -29,7 +30,7 @@ public class PushNotificationMessage implements Message {
     }
 
     public static PushNotificationMessage parse(String message) throws JSONException {
-        JSONObject json = new JSONObject(message);
+        JSONObject json = new JSONObject(message).getJSONObject(MESSAGE);
         return new PushNotificationMessage(
                 json.getString(TITLE_KEY),
                 json.getString(CONTENT_KEY),
@@ -92,7 +93,7 @@ public class PushNotificationMessage implements Message {
             if (mUri != null) {
                 ret.put(URI_KEY, mUri);
             }
-            return ret.toString();
+            return new JSONObject().put(MESSAGE, ret).toString();
         } catch (JSONException e) {
             return null;
         }

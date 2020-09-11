@@ -4,6 +4,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 public class ChannelSubscriptionMessage implements Message {
+    private static final String MESSAGE = "channel_subscription";
     private static final String PACKAGE_KEY = "package";
     private static final String CHANNEL_KEY = "channel";
     private String mPackage;
@@ -15,7 +16,7 @@ public class ChannelSubscriptionMessage implements Message {
     }
 
     public static ChannelSubscriptionMessage parse(String message) throws JSONException {
-        JSONObject json = new JSONObject(message);
+        JSONObject json = new JSONObject(message).getJSONObject(MESSAGE);
         return new ChannelSubscriptionMessage(json.getString(PACKAGE_KEY), json.getString(CHANNEL_KEY));
     }
 
@@ -38,10 +39,12 @@ public class ChannelSubscriptionMessage implements Message {
     @Override
     public String create() {
         try {
-            return new JSONObject()
-                    .put(PACKAGE_KEY, mPackage)
-                    .put(CHANNEL_KEY, mChannel)
-                    .toString();
+            return new JSONObject().put(
+                            MESSAGE,
+                            new JSONObject()
+                                    .put(PACKAGE_KEY, mPackage)
+                                    .put(CHANNEL_KEY, mChannel)
+                    ).toString();
         } catch (JSONException e) {
             return null;
         }
