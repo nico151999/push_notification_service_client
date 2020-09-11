@@ -54,9 +54,9 @@ public class NotificationService extends Service {
     public static final String PORT_EXTRA_KEY = "PORT_EXTRA_KEY";
     private static final String DB_PACKAGE_KEY = "package";
     private static final String DB_SUBSCRIPTIONS_KEY = "subscriptions";
-    private static final String NOTIFICATION_LIBRARY_RECEIVER = "de.nico.pushnotification.library.receiver";
+    private static final String NOTIFICATION_LIBRARY_RECEIVER = "de.nico.pushnotification.library.NotificationReceiver";
     private static final String ACTION_SHOW_NOTIFICATION = "de.nico.pushnotification.library.action.SHOW_NOTIFICATION";
-    private static final String PERMISSION_SHOW_NOTIFICATION = "de.nico.pushnotification.library.action.SHOW_NOTIFICATION";
+    private static final String PERMISSION_RECEIVE_NOTIFICATION = "de.nico.pushnotification.servicetester.permission.RECEIVE_NOTIFICATION";
 
     private boolean mServiceRunning;
     private Handler mServiceHandler;
@@ -189,7 +189,7 @@ public class NotificationService extends Service {
                                                     message.getReceiverPackage(),
                                                     NOTIFICATION_LIBRARY_RECEIVER
                                             )),
-                                    PERMISSION_SHOW_NOTIFICATION
+                                    PERMISSION_RECEIVE_NOTIFICATION
                             );
                         } catch (JSONException e) {
                             Log.e(TAG, "Failed to parse notification specifications", e);

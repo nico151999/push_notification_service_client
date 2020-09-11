@@ -4,21 +4,28 @@
     package="de.nico.pushnotification.servicetester">
 
     <permission
-        android:name="de.nico.pushnotification.servicetester.permission.NOTIFICATION_CHANNEL_SUBSCRIBER"
+        android:name="de.nico.pushnotification.servicetester.permission.SUBSCRIBE_NOTIFICATION_CHANNEL"
         android:label="@string/subscribe_channel_permission_label"
         android:description="@string/subscribe_channel_permission_description"
         android:protectionLevel="normal" />
 
     <permission
         android:name="de.nico.pushnotification.servicetester.permission.RECEIVE_NOTIFICATION"
-        android:label="@string/subscribe_permission_label"
-        android:description="@string/subscribe_permission_description"
+        android:label="@string/receive_notification_permission_label"
+        android:description="@string/receive_notification_permission_description"
+        android:protectionLevel="normal" />
+
+    <permission
+        android:name="de.nico.pushnotification.servicetester.permission.SEND_NOTIFICATION"
+        android:label="@string/send_notification_permission_label"
+        android:description="@string/send_notification_permission_description"
         android:protectionLevel="normal" />
 
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="de.nico.pushnotification.servicetester.permission.SEND_NOTIFICATION" />
 
     <application
         android:usesCleartextTraffic="true"
@@ -52,9 +59,15 @@
             android:enabled="true"
             android:exported="true"
             android:name=".receiver.ChannelSubscriptionReceiver"
-            android:permission="de.nico.pushnotification.servicetester.permission.NOTIFICATION_CHANNEL_SUBSCRIBER">
+            android:permission="de.nico.pushnotification.servicetester.permission.SUBSCRIBE_NOTIFICATION_CHANNEL">
             <intent-filter>
                 <action android:name="de.nico.pushnotification.servicetester.action.SUBSCRIBE_NOTIFICATION_CHANNEL" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name=".receiver.NotificationAppInstalledStatusReceiver" >
+            <intent-filter android:priority="999">
+                <action android:name="android.intent.action.PACKAGE_FULLY_REMOVED" />
+                <data android:scheme="package" />
             </intent-filter>
         </receiver>
         <receiver android:name=".receiver.StartNotificationServiceReceiver"/>

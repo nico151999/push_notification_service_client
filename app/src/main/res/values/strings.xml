@@ -17,6 +17,8 @@
     <string name="open_admin_settings">Open the admin settings page</string>
     <string name="subscribe_channel_permission_label">Subscribe to notification channels</string>
     <string name="subscribe_channel_permission_description">This permission allows the app to subscribe to notification channels</string>
-    <string name="subscribe_permission_label">Receive push notifications</string>
-    <string name="subscribe_permission_description">This permission allows the app to receive push notifications</string>
+    <string name="receive_notification_permission_label">Receive notifications</string>
+    <string name="receive_notification_permission_description">This permission allows the app to receive notifications</string>
+    <string name="send_notification_permission_label">Send notifications</string>
+    <string name="send_notification_permission_description">This permission allows the app to send notifications</string>
 </resources>

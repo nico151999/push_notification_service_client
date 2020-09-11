@@ -38,7 +38,7 @@ public class NotificationAppInstalledStatusReceiver extends BroadcastReceiver {
                     Log.e(TAG, "Failed adding package", e);
                 }
                 break;
-            case Intent.ACTION_PACKAGE_REMOVED:
+            case Intent.ACTION_PACKAGE_FULLY_REMOVED:
                 onPackageRemoved(packageName, context);
                 break;
         }
@@ -71,7 +71,7 @@ public class NotificationAppInstalledStatusReceiver extends BroadcastReceiver {
     }
 
     private void onPackageRemoved(String pkg, Context context) {
-        Log.i(TAG, pkg + " was removed");
+        Log.i(TAG, pkg + " was removed. If it was registered as notification receiver, it will be unregistered.");
         try {
             context.startService(
                     new Intent(context, NotificationService.class)

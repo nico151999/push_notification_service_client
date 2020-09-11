@@ -89,7 +89,7 @@ public class AdminStateReceiver extends DeviceAdminReceiver {
     public static void startNetworkStateService(Context context) {
         // todo: this method has to be removed cause this service will be started by the system
         //  when we switch to DeviceAdminService
-        Log.i(TAG, "Device admin tries to start network state service");
+        Log.i(TAG, "Device admin tries to start broadcast register service");
         try {
             context.startService(
                     new Intent(
@@ -105,7 +105,7 @@ public class AdminStateReceiver extends DeviceAdminReceiver {
     private void stopNetworkStateService(Context context) {
         // todo: this method has to be removed cause this service will be started by the system
         //  when we switch to DeviceAdminService
-        Log.i(TAG, "Device admin tries to stop network state service");
+        Log.i(TAG, "Device admin tries to stop broadcast register service");
         try {
             context.stopService(
                     new Intent(

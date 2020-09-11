@@ -12,6 +12,7 @@ import java.util.function.Consumer;
 import de.nico.pushnotification.servicetester.message.Message;
 
 public class PushNotificationClient {
+    // todo: consider using an SSLSocket
     private final Socket mClientSocket;
     private final PrintWriter mOut;
     private MessageReceiver mMessageReceiver;
