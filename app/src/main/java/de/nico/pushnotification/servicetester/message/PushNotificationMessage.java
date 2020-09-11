@@ -35,8 +35,8 @@ public class PushNotificationMessage implements Message {
                 json.getString(TITLE_KEY),
                 json.getString(CONTENT_KEY),
                 json.getString(RECEIVER_KEY),
-                json.has(ICON_KEY) ? json.getString(ICON_KEY) : null,
-                json.has(URI_KEY) ? json.getString(URI_KEY) : null
+                json.optString(ICON_KEY),
+                json.optString(URI_KEY)
         );
     }
 

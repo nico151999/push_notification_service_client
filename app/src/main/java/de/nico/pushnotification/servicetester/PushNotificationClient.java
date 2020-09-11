@@ -70,12 +70,7 @@ public class PushNotificationClient {
             while (mmAliveSynchronously || (!mmClientSocket.isClosed() && !isInterrupted())) {
                 try {
                     String message = mmIn.readLine();
-                    new Thread() {
-                        @Override
-                        public void run() {
-                            mmOnReceiveMessageListeners.forEach(listener -> listener.accept(message));
-                        }
-                    }.start();
+                    mmOnReceiveMessageListeners.forEach(listener -> listener.accept(message));
                 } catch (IOException e) {
                     if (mmAliveSynchronously)  {
                         mmAliveSynchronously = false;
