@@ -25,11 +25,13 @@ import java.util.function.Consumer;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.couchbase.lite.Array;
 import com.couchbase.lite.CouchbaseLite;
 import com.couchbase.lite.CouchbaseLiteException;
 import com.couchbase.lite.DataSource;
 import com.couchbase.lite.Database;
 import com.couchbase.lite.DatabaseConfiguration;
+import com.couchbase.lite.Dictionary;
 import com.couchbase.lite.Expression;
 import com.couchbase.lite.Meta;
 import com.couchbase.lite.MutableArray;
@@ -41,6 +43,7 @@ import com.couchbase.lite.ResultSet;
 import com.couchbase.lite.SelectResult;
 
 import de.nico.pushnotification.servicetester.message.ApplicationSubscriptionMessage;
+import de.nico.pushnotification.servicetester.message.ApplicationUnsubscriptionMessage;
 import de.nico.pushnotification.servicetester.message.ChannelSubscriptionMessage;
 import de.nico.pushnotification.servicetester.message.ClientsMessage;
 import de.nico.pushnotification.servicetester.message.PushNotificationMessage;
@@ -54,6 +57,7 @@ public class NotificationService extends Service {
     public static final String PORT_EXTRA_KEY = "PORT_EXTRA_KEY";
     private static final String DB_PACKAGE_KEY = "package";
     private static final String DB_SUBSCRIPTIONS_KEY = "subscriptions";
+    private static final String DB_NAME = "subscribers";
     private static final String NOTIFICATION_LIBRARY_RECEIVER = "de.nico.pushnotification.library.NotificationReceiver";
     private static final String ACTION_SHOW_NOTIFICATION = "de.nico.pushnotification.library.action.SHOW_NOTIFICATION";
     private static final String PERMISSION_RECEIVE_NOTIFICATION = "de.nico.pushnotification.servicetester.permission.RECEIVE_NOTIFICATION";
@@ -148,10 +152,15 @@ public class NotificationService extends Service {
             }
             ClientsMessage message = new ClientsMessage();
             for (Result res : result) {
-                message.put(
-                        res.getString(DB_PACKAGE_KEY),
-                        (List<String>) (List<?>) res.getArray(DB_SUBSCRIPTIONS_KEY).toList()
-                );
+                Dictionary dic = res.getDictionary(DB_NAME);
+                String pkg = dic.getString(DB_PACKAGE_KEY);
+                Array channels = dic.getArray(DB_SUBSCRIPTIONS_KEY);
+                if (pkg != null) {
+                    message.put(
+                            pkg,
+                            (List<String>) (List<?>) (channels == null ? new ArrayList<>() : channels.toList())
+                    );
+                }
             }
             // TODO: see TODO @handleSubscriptionIntent method
             mPushNotificationClient.sendMessage(message);
@@ -275,21 +284,25 @@ public class NotificationService extends Service {
                 return;
             }
             String subscription = intent.getStringExtra(SUBSCRIPTION_CHANNEL_EXTRA_KEY);
+            if (subscription.length() == 0) {
+                Log.e(TAG, "The channel that is to be subscribed to must not be empty");
+                return;
+            }
             MutableDocument document = database.getDocument(res.getString("id")).toMutable();
             MutableArray subscriptions = document.getArray(DB_SUBSCRIPTIONS_KEY);
             if (!subscriptions.toList().contains(subscription)) {
                 subscriptions.addString(subscription);
+                try {
+                    database.save(document);
+                } catch (CouchbaseLiteException e) {
+                    Log.e(TAG, "Could not add subscription to database", e);
+                    return;
+                }
+                mPushNotificationClient.sendMessage(new ChannelSubscriptionMessage(subscriber, subscription));
             }
-            try {
-                database.save(document);
-            } catch (CouchbaseLiteException e) {
-                Log.e(TAG, "Could not add subscription to database", e);
-                return;
-            }
-            mPushNotificationClient.sendMessage(new ChannelSubscriptionMessage(subscriber, subscription));
         } else {
             if (res != null) {
-                Log.i(TAG, "Application is already registered");
+                Log.i(TAG, "Application " + subscriber + " is already registered");
                 return;
             }
             MutableDocument mutableDoc = new MutableDocument()
@@ -304,6 +317,7 @@ public class NotificationService extends Service {
         }
     }
 
+    // todo: also handle unsubscription of channels and notify the server about channel unsubscriptions
     private synchronized void handleUnsubscriptionIntent(@NonNull Intent intent) {
         Database database;
         try {
@@ -312,7 +326,7 @@ public class NotificationService extends Service {
             Log.e(TAG, "Failed to create database object", e);
             return;
         }
-        String unsubscriber = intent.getStringExtra(SUBSCRIPTION_EXTRA_KEY);
+        String unsubscriber = intent.getStringExtra(UNSUBSCRIPTION_EXTRA_KEY);
         Query query = QueryBuilder.select(SelectResult.expression(Meta.id))
                 .from(DataSource.database(database))
                 .where(Expression.property(DB_PACKAGE_KEY).equalTo(Expression.string(unsubscriber)));
@@ -330,13 +344,14 @@ public class NotificationService extends Service {
         } catch (CouchbaseLiteException e) {
             Log.e(TAG, "Failed to delete unsubscriber from subscribers", e);
         }
+        mPushNotificationClient.sendMessage(new ApplicationUnsubscriptionMessage(unsubscriber));
     }
 
     private Database initSubscriberDatabase() throws CouchbaseLiteException {
         CouchbaseLite.init(getApplicationContext());
         DatabaseConfiguration config = new DatabaseConfiguration();
         config.setDirectory(getFilesDir().getPath());
-        return new Database("subscribers", config);
+        return new Database(DB_NAME, config);
     }
 
     @Override

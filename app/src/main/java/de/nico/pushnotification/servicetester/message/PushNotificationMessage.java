@@ -25,18 +25,20 @@ public class PushNotificationMessage implements Message {
         mTitle = title;
         mContent = content;
         mReceiverPackage = receiverPackage;
-        mIcon = Base64.decode(icon, Base64.DEFAULT);
+        mIcon = icon == null ? null : Base64.decode(icon, Base64.DEFAULT);
         mUri = uri;
     }
 
     public static PushNotificationMessage parse(String message) throws JSONException {
         JSONObject json = new JSONObject(message).getJSONObject(MESSAGE);
+        String icon = json.optString(ICON_KEY);
+        String uri = json.optString(URI_KEY);
         return new PushNotificationMessage(
                 json.getString(TITLE_KEY),
                 json.getString(CONTENT_KEY),
                 json.getString(RECEIVER_KEY),
-                json.optString(ICON_KEY),
-                json.optString(URI_KEY)
+                icon.length() == 0 ? null : icon,
+                uri.length() == 0 ? null : uri
         );
     }
 

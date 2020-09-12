@@ -14,6 +14,8 @@ public class ChannelSubscriptionReceiver extends BroadcastReceiver {
     private static final String SUBSCRIPTION_CHANNEL_KEY = "SUBSCRIPTION_CHANNEL_KEY";
     private static final String ACTION_SUBSCRIBE_NOTIFICATION_CHANNEL = "de.nico.pushnotification.servicetester.action.SUBSCRIBE_NOTIFICATION_CHANNEL";
 
+    // TODO: currently an app could pretend to be an app that is already registered and subscribe to channels in its name.
+    //  this needs to be fixed
     @Override
     public void onReceive(Context context, Intent intent) {
         String subscription = intent.getStringExtra(SUBSCRIPTION_CHANNEL_KEY);
