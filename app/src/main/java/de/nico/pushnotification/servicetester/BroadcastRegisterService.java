@@ -63,9 +63,6 @@ public class BroadcastRegisterService extends /*DeviceAdmin*/Service {
     }
 
     private void registerApplicationInstallationStateReceiver() {
-        // todo: if packages are added and the service is not running, the packages will
-        //  not be added to the database. For now, make sure the service is always
-        //  running when installing apps
         mNotificationAppInstalledStatusReceiver = new NotificationAppInstalledStatusReceiver();
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(Intent.ACTION_PACKAGE_ADDED);

@@ -4,6 +4,9 @@ import android.app.Service;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.Network;
 import android.net.NetworkCapabilities;
@@ -47,6 +50,8 @@ import de.nico.pushnotification.servicetester.message.ApplicationUnsubscriptionM
 import de.nico.pushnotification.servicetester.message.ChannelSubscriptionMessage;
 import de.nico.pushnotification.servicetester.message.ClientsMessage;
 import de.nico.pushnotification.servicetester.message.PushNotificationMessage;
+
+import static de.nico.pushnotification.servicetester.receiver.NotificationAppInstalledStatusReceiver.RECEIVE_NOTIFICATION_PERMISSION;
 
 public class NotificationService extends Service {
     private static final String TAG = NotificationService.class.getSimpleName();
@@ -151,15 +156,48 @@ public class NotificationService extends Service {
                 return;
             }
             ClientsMessage message = new ClientsMessage();
-            for (Result res : result) {
-                Dictionary dic = res.getDictionary(DB_NAME);
-                String pkg = dic.getString(DB_PACKAGE_KEY);
-                Array channels = dic.getArray(DB_SUBSCRIPTIONS_KEY);
-                if (pkg != null) {
-                    message.put(
-                            pkg,
-                            (List<String>) (List<?>) (channels == null ? new ArrayList<>() : channels.toList())
-                    );
+            List<ApplicationInfo> packages = getPackageManager().getInstalledApplications(PackageManager.GET_META_DATA);
+            apploop: for (ApplicationInfo applicationInfo : packages) {
+                PackageInfo pi;
+                String packageName = applicationInfo.packageName;
+                try {
+                    pi = getPackageManager().getPackageInfo(packageName, PackageManager.GET_PERMISSIONS);
+                } catch (PackageManager.NameNotFoundException e) {
+                    continue;
+                }
+                String[] permissions = pi.requestedPermissions;
+                if (permissions != null) {
+                    for (String permission : permissions) {
+                        if (permission.equals(RECEIVE_NOTIFICATION_PERMISSION)) {
+                            // todo: query database with where statement instead and see if we get one or no result
+                            for (Result res : result) {
+                                Dictionary dic = res.getDictionary(DB_NAME);
+                                String pkg = dic.getString(DB_PACKAGE_KEY);
+                                if (packageName.equals(pkg)) {
+                                    Array channels = dic.getArray(DB_SUBSCRIPTIONS_KEY);
+                                    message.put(
+                                            pkg,
+                                            (List<String>) (List<?>) (channels == null ? new ArrayList<>() : channels.toList())
+                                    );
+                                    continue apploop;
+                                }
+                            }
+                            MutableDocument mutableDoc = new MutableDocument()
+                                    .setString(DB_PACKAGE_KEY, packageName)
+                                    .setArray(DB_SUBSCRIPTIONS_KEY, new MutableArray());
+                            try {
+                                database.save(mutableDoc);
+                            } catch (CouchbaseLiteException e) {
+                                Log.e(TAG, "Failed adding package to registered packages", e);
+                                break;
+                            }
+                            message.put(
+                                    packageName,
+                                    new ArrayList<>()
+                            );
+                            break;
+                        }
+                    }
                 }
             }
             // TODO: see TODO @handleSubscriptionIntent method

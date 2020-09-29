@@ -12,7 +12,7 @@ import de.nico.pushnotification.servicetester.NotificationService;
 
 public class NotificationAppInstalledStatusReceiver extends BroadcastReceiver {
     private static final String TAG = NotificationAppInstalledStatusReceiver.class.getSimpleName();
-    private static final String RECEIVE_NOTIFICATION_PERMISSION = "de.nico.pushnotification.servicetester.permission.RECEIVE_NOTIFICATION";
+    public static final String RECEIVE_NOTIFICATION_PERMISSION = "de.nico.pushnotification.servicetester.permission.RECEIVE_NOTIFICATION";
 
     @Override
     public void onReceive(Context context, Intent intent) {
